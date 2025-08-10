@@ -42,63 +42,15 @@
 // - Be careful when splitting by null bytes to properly handle multi-byte UTF-8 characters.
 //
 
-#include <fstream>
-#include <iostream>
-#include <unordered_map>
-#include <vector>
+#include <string>
+#include <variant>
 
-#include <fstream>
-#include <iostream>
-
-bool copy_file(const std::string& src_path, const std::string& dst_path) {
-    std::ifstream src(src_path, std::ios::binary);
-    if (!src.is_open()) {
-        std::cerr << "Failed to open source file: " << src_path << "\n";
-        return false;
+std::variant<std::string, bool> flag(const std::string key, char* argv[], const int argc) {
+    bool reached = false;
+    for (int i = 0; i < argc; i++) {
+        if (reached & (argv[i][0] == '-')) return true;
+        if (const auto val = std::string(argv[i]); val == key) reached = true;
+        else if (reached) return val;
     }
-
-    std::ofstream dst(dst_path, std::ios::binary);
-    if (!dst.is_open()) {
-        std::cerr << "Failed to open destination file: " << dst_path << "\n";
-        return false;
-    }
-
-    dst << src.rdbuf();
-
-    if (!dst) {
-        std::cerr << "Failed to write to destination file\n";
-        return false;
-    }
-
-    return true;
+    return false;
 }
-
-class PenaurConfig {
-    public:
-        std::string fileName;
-        int v1=0;
-        int v2=0;
-        int v3=0;
-        std::unordered_map<std::string, std::string> config;
-        explicit PenaurConfig(const std::string &fn): fileName(fn){};
-
-        std::vector<char> raw() const {
-            std::ifstream file(fileName, std::ios::binary);
-            if (!file) {
-                std::cerr << "File not found/ Error while loading file" << std::endl;
-                return std::vector<char>();
-            }
-            std::vector<char> buffer((std::istreambuf_iterator<char>(file)),
-                                     std::istreambuf_iterator<char>());
-            return buffer;
-        }
-
-        void parser() {
-            const std::vector<char> buffer = raw();
-            v1 = buffer[0];
-            v2 = buffer[1];
-            v3 = buffer[2];
-            // TODO spect version matching and handle backward compatibility
-
-        }
-};
