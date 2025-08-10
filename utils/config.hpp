@@ -1,3 +1,4 @@
+
 // config.h
 #ifndef PENAURCONFIG_H
 #define PENAURCONFIG_H
@@ -39,7 +40,7 @@ public:
         v1 = static_cast<unsigned char>(buffer[0]);
         v2 = static_cast<unsigned char>(buffer[1]);
         v3 = static_cast<unsigned char>(buffer[2]);
-        // TODO: spec version matching and handle backward compatibility
+        
     }
 };
 

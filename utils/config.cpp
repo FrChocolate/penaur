@@ -47,6 +47,32 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fstream>
+#include <iostream>
+
+bool copy_file(const std::string& src_path, const std::string& dst_path) {
+    std::ifstream src(src_path, std::ios::binary);
+    if (!src.is_open()) {
+        std::cerr << "Failed to open source file: " << src_path << "\n";
+        return false;
+    }
+
+    std::ofstream dst(dst_path, std::ios::binary);
+    if (!dst.is_open()) {
+        std::cerr << "Failed to open destination file: " << dst_path << "\n";
+        return false;
+    }
+
+    dst << src.rdbuf();
+
+    if (!dst) {
+        std::cerr << "Failed to write to destination file\n";
+        return false;
+    }
+
+    return true;
+}
+
 class PenaurConfig {
     public:
         std::string fileName;
