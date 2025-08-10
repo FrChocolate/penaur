@@ -16,11 +16,11 @@ public:
         createCgroup();
     }
 
-
+    
     ~CgroupManager(){
         if(rmdir(cgroupPath.c_str())== -1){
-            perror("Error emoving cgroup directory"); 
-            
+            perror("Error removing cgroup directory"); 
+
         }
     }
 
