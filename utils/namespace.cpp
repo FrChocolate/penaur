@@ -33,19 +33,17 @@ public:
             perror("Error opening cgroup.subtree_control");
             exit(EXIT_FAILURE);
         }
-
-
         // rEad the current value of subtree_control
         std::string currentValue ; 
         std::getline(controlFile , currentValue);
         if (currentValue.find("memory") == std::string::npos){
             controlFile << "+memory" << std::endl;
             controlFile.close(); 
-        }
-        
-
-        
+        }  
+        controlFile.close();
     }
+
+
     // Function to create the cgroup directory for the current process
     void createCgroup() const {
         // Create the cgroup directory if it doesn't exist
