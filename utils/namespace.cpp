@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -14,6 +15,16 @@ public:
         : cgroupPath("/sys/fs/cgroup/" + cgroupName) {
         createCgroup();
     }
+
+
+    ~CgroupManager(){
+        if(rmdir(cgroupPath.c_str())== -1){
+            perror("Error emoving cgroup directory"); 
+            
+        }
+    }
+
+
 
     // Function to enable memory control in cgroup v2
     void enableMemoryControl() const {
