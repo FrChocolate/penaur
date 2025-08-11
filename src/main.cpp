@@ -12,10 +12,6 @@ int main(int argc, char* argv[]){
         info("chroot is NULL, Running without jail root.");
     }
 
-    u_int64_t msoft;
-    u_int64_t mhard;
-    u_int64_t csoft;
-    u_int64_t chard;
     const auto memsoft = flag("--memsoft", argv, argc);
     if (memsoft != "NULL") {
         info("--memsoft is set");
@@ -33,7 +29,13 @@ int main(int argc, char* argv[]){
     if (cpusoft != "NULL") {
         info("--cpusoft is set");
     }
-    const Runner sandbox(chroot.c_str(), memsoft, memhard, cpusoft, cpu);
+
+    const auto sysallow = flag("--sys-deny", argv, argc);
+    if (sysallow != "NULL") {
+        info("--sys-deny is set");
+    }
+
+    const Runner sandbox(chroot.c_str(), memsoft, memhard, cpusoft, cpu, sysallow);
     const auto cmd  = flag("--cmd", argv, argc);
     if (cmd == "NULL") {
         error("--cmd is not set, exiting...");

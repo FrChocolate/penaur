@@ -11,7 +11,25 @@
 #include <seccomp.h>
 #include <vector>
 #include <cstdlib>
+#include <string>
+#include <vector>
+#include <unistd.h>     // fork(), execl(), chroot(), chdir(), _exit()
+#include <sys/wait.h>   // waitpid(), WIFEXITED, WEXITSTATUS, WIFSIGNALED, WTERMSIG
+#include <cerrno>       // errno
+#include <cstring>
+#include <sstream>
 
+inline std::vector<std::string> split_by_comma(const std::string& input) {
+    std::vector<std::string> result;
+    std::stringstream ss(input);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        result.push_back(token);
+    }
+
+    return result;
+}
 class Runner {
 public:
     const char* jailRoot;
@@ -19,30 +37,28 @@ public:
     const std::string memoryHard;
     const std::string cpu;
     const std::string cpuHard;
+    const std::vector<std::string> allowSyscalls;
 
-    explicit Runner(const char* jr, std::string mem, std::string memh, std::string cpu, std::string cpuh)
+    explicit Runner(const char* jr, std::string mem, std::string memh, std::string cpu, std::string cpuh, const std::string& alsys)
         : jailRoot(jr), memory(std::move(mem)), memoryHard(std::move(memh)),
-          cpu(std::move(cpu)), cpuHard(std::move(cpuh)) {}
+          cpu(std::move(cpu)), cpuHard(std::move(cpuh)), allowSyscalls(split_by_comma(alsys)) {}
 
     void set_syscalls() const {
-        const scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_KILL);
-
+        // Default action: ALLOW all syscalls
+        scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
         if (!ctx) {
             error("seccomp_init failed");
             return;
         }
 
-        const std::vector<std::string> allowSyscalls = {
-            "read", "write", "exit", "exit_group", "execve", "rt_sigreturn"
-        };
-
+        // For each syscall in allowSyscalls vector, block it (kill on call)
         for (const auto& name : allowSyscalls) {
             int num = seccomp_syscall_resolve_name(name.c_str());
             if (num == __NR_SCMP_ERROR) {
-                warning("Unknown syscall in allow list: " + name);
+                warning("Unknown syscall in deny list: " + name);
                 continue;
             }
-            if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, num, 0) < 0) {
+            if (seccomp_rule_add(ctx, SCMP_ACT_KILL, num, 0) < 0) {
                 error("seccomp_rule_add failed for " + name);
                 seccomp_release(ctx);
                 return;
@@ -108,27 +124,56 @@ public:
     void run(const std::string& cmd) const {
         info("Memory limit (soft): " + memory);
 
-        if (jailRoot != nullptr && std::string(jailRoot) != "NULL") {
-            info(std::string("Chrooting to: ") + jailRoot);
-            if (chroot(jailRoot) != 0) {
-                error(std::string("chroot failed: ") + strerror(errno));
-            }
-            if (chdir("/") != 0) {
-                error(std::string("chdir failed: ") + strerror(errno));
-            }
+        pid_t pid = fork();
+        if (pid < 0) {
+            error("fork failed: " + std::string(strerror(errno)));
+            return;
         }
 
-        if (memory != "NULL" || memoryHard != "NULL" || cpu != "NULL" || cpuHard != "NULL") {
-            info("Limiting resources");
-            limit_resources();
+        if (pid == 0) {
+            // CHILD PROCESS
+
+            if (jailRoot != nullptr && std::string(jailRoot) != "NULL") {
+                info(std::string("Chrooting to: ") + jailRoot);
+                if (chroot(jailRoot) != 0) {
+                    error(std::string("chroot failed: ") + strerror(errno));
+                    _exit(1);
+                }
+                if (chdir("/") != 0) {
+                    error(std::string("chdir failed: ") + strerror(errno));
+                    _exit(1);
+                }
+            }
+
+            if (memory != "NULL" || memoryHard != "NULL" || cpu != "NULL" || cpuHard != "NULL") {
+                info("Limiting resources");
+                limit_resources();
+            }
+
+            if (!allowSyscalls.empty()) {
+                info("Setting syscalls");
+                set_syscalls();
+            }
+
+            execl(cmd.c_str(), cmd.c_str(), nullptr);
+
+            // If execl returns, it failed
+            error(std::string("execl failed: ") + strerror(errno));
+            _exit(1);
+        } else {
+            // PARENT PROCESS
+            int status;
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status)) {
+                info("Child exited with status " + std::to_string(WEXITSTATUS(status)));
+            } else if (WIFSIGNALED(status)) {
+                info("Child killed by signal " + std::to_string(WTERMSIG(status)));
+            } else {
+                info("Child stopped or continued");
+            }
         }
-
-        info("Installing seccomp syscall filter");
-        set_syscalls();
-
-        execl(cmd.c_str(), cmd.c_str(), nullptr);
-        error(std::string("execl failed: ") + strerror(errno));
     }
+
 };
 
 #endif // RUNNER_H
