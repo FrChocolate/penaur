@@ -131,7 +131,7 @@ public:
         }
 
         if (pid == 0) {
-            // CHILD PROCESS
+
 
             if (jailRoot != nullptr && std::string(jailRoot) != "NULL") {
                 info(std::string("Chrooting to: ") + jailRoot);
@@ -157,11 +157,11 @@ public:
 
             execl(cmd.c_str(), cmd.c_str(), nullptr);
 
-            // If execl returns, it failed
+
             error(std::string("execl failed: ") + strerror(errno));
             _exit(1);
         } else {
-            // PARENT PROCESS
+
             int status;
             waitpid(pid, &status, 0);
             if (WIFEXITED(status)) {
