@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -15,16 +16,34 @@ public:
         createCgroup();
     }
 
+    
+    ~CgroupManager(){
+        if(rmdir(cgroupPath.c_str())== -1){
+            perror("Error removing cgroup directory"); 
+
+        }
+    }
+
+
+
     // Function to enable memory control in cgroup v2
     void enableMemoryControl() const {
-        std::ofstream controlFile(cgroupPath + "/cgroup.subtree_control");
+        std::fstream controlFile(cgroupPath + "/cgroup.subtree_control");
         if (!controlFile) {
             perror("Error opening cgroup.subtree_control");
             exit(EXIT_FAILURE);
         }
-        controlFile << "+memory" << std::endl;
+        // rEad the current value of subtree_control
+        std::string currentValue ; 
+        std::getline(controlFile , currentValue);
+        if (currentValue.find("memory") == std::string::npos){
+            controlFile << "+memory" << std::endl;
+            controlFile.close(); 
+        }  
         controlFile.close();
     }
+
+
     // Function to create the cgroup directory for the current process
     void createCgroup() const {
         // Create the cgroup directory if it doesn't exist
