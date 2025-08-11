@@ -8,6 +8,9 @@
 #include <cerrno>
 #include <cstring>
 #include "logger.hpp"
+#include <seccomp.h>
+#include <vector>
+#include <cstdlib>
 
 class Runner {
 public:
@@ -20,6 +23,40 @@ public:
     explicit Runner(const char* jr, std::string mem, std::string memh, std::string cpu, std::string cpuh)
         : jailRoot(jr), memory(std::move(mem)), memoryHard(std::move(memh)),
           cpu(std::move(cpu)), cpuHard(std::move(cpuh)) {}
+
+    void set_syscalls() const {
+        const scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_KILL);
+
+        if (!ctx) {
+            error("seccomp_init failed");
+            return;
+        }
+
+        const std::vector<std::string> allowSyscalls = {
+            "read", "write", "exit", "exit_group", "execve", "rt_sigreturn"
+        };
+
+        for (const auto& name : allowSyscalls) {
+            int num = seccomp_syscall_resolve_name(name.c_str());
+            if (num == __NR_SCMP_ERROR) {
+                warning("Unknown syscall in allow list: " + name);
+                continue;
+            }
+            if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, num, 0) < 0) {
+                error("seccomp_rule_add failed for " + name);
+                seccomp_release(ctx);
+                return;
+            }
+        }
+
+        if (seccomp_load(ctx) < 0) {
+            error("seccomp_load failed");
+            seccomp_release(ctx);
+            return;
+        }
+
+        seccomp_release(ctx);
+    }
 
     void limit_resources() const {
         auto to_rlim = [](const std::string& s) -> rlim_t {
@@ -85,6 +122,9 @@ public:
             info("Limiting resources");
             limit_resources();
         }
+
+        info("Installing seccomp syscall filter");
+        set_syscalls();
 
         execl(cmd.c_str(), cmd.c_str(), nullptr);
         error(std::string("execl failed: ") + strerror(errno));
