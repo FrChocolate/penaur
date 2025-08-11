@@ -4,8 +4,8 @@ project(penaur)
 
 add_executable(penaur
         src/main.cpp
+        utils/runner.hpp
         utils/config.hpp
-        utils/runner.cpp
         utils/runner.hpp
 )
 
