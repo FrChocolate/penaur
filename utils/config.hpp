@@ -7,7 +7,7 @@
 #include <string>
 #include <variant>
 
-std::string flag(const std::string key, char* argv[], const int argc) {
+inline std::string flag(const std::string& key, char* argv[], const int argc) {
     bool reached = false;
     for (int i = 0; i < argc; i++) {
         if (reached & (argv[i][0] == '-')) return "true";
