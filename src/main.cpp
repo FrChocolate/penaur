@@ -11,11 +11,9 @@ int main(int argc, char* argv[]){
     if (chroot == "NULL") {
         info("chroot is NULL, Running without jail root.");
     }
-
     const auto memsoft = flag("--memsoft", argv, argc);
     if (memsoft != "NULL") {
         info("--memsoft is set");
-
     }
     const auto memhard = flag("--memhard", argv, argc);
     if (memhard != "NULL") {

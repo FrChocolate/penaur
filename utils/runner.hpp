@@ -51,7 +51,6 @@ public:
             return;
         }
 
-        // For each syscall in allowSyscalls vector, block it (kill on call)
         for (const auto& name : allowSyscalls) {
             int num = seccomp_syscall_resolve_name(name.c_str());
             if (num == __NR_SCMP_ERROR) {
@@ -87,7 +86,7 @@ public:
         rlim_t mem_soft = to_rlim(memory);
         rlim_t mem_hard = to_rlim(memoryHard);
         rlim_t cpu_soft = to_rlim(cpu);
-        rlim_t cpu_hard = to_rlim(cpuHard);
+        const rlim_t cpu_hard = to_rlim(cpuHard);
 
         mem_soft *= 1024 * 1024;
         mem_hard *= 1024 * 1024;
