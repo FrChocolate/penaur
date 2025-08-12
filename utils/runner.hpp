@@ -131,13 +131,32 @@ public:
   const std::vector<std::string> allowSyscalls;
   const std::string hostname;
   const std::string unshareIPC;
+  const std::string unsharePID;
+  const std::string vnet;
 
-  explicit Runner(const char *jr, const std::string &alsys, std::string &lts, std::string &hn, std::string uipc)
+  explicit Runner(const char *jr, const std::string &alsys, std::string &lts, std::string &hn, std::string& uipc, std::string& upid, std::string& vt)
       : jailRoot(jr),
         limits(lts),
         allowSyscalls(split_by(alsys)),
         hostname(hn),
-        unshareIPC(std::move(uipc)){}
+        unshareIPC(uipc),
+        unsharePID(upid),
+        vnet(vt)
+
+  {}
+
+
+  void set_network(pid_t pid) const {
+    if (vnet != "NULL") {
+      if (unshare(CLONE_NEWNET) == -1) {
+        perror("unshare");
+        error("Clone network unavailable");
+        return;
+      }
+      info("Cloned network");
+    }
+
+  }
 
   void set_UTS_IPC() const {
     if (unshare(CLONE_NEWUTS) == -1) {
@@ -158,6 +177,16 @@ public:
       }
       info("IPC Cloned.");
     }
+
+    if (unsharePID != "NULL") {
+      info("Cloning PID.");
+      if (unshare(CLONE_NEWPID) == -1) {
+        perror("unsharePID");
+        error("Couldn't set PID access");
+      }
+      info("PID Cloned.");
+    }
+
   }
 
   static void set_limit(const int resource, const rlim_t soft,
@@ -218,8 +247,8 @@ public:
       }
 
       if (cur > max) {
-          warning("Stack soft limit > stack hard limit; adjusting soft to hard.");
-          cur = max;
+        warning("Stack soft limit > stack hard limit; adjusting soft to hard.");
+        cur = max;
       }
       set_limit(rlimit, cur, max);
 
@@ -233,8 +262,11 @@ public:
       error("fork failed: " + std::string(strerror(errno)));
       return;
     }
-    set_UTS_IPC();
+
+    // Only set UTS and IPC in the child process
     if (pid == 0) {
+      set_UTS_IPC();
+      set_network(pid);
 
       if (jailRoot != nullptr && std::string(jailRoot) != "NULL") {
         info(std::string("Chrooting to: ") + jailRoot);
@@ -262,6 +294,8 @@ public:
       error(std::string("execl failed: ") + strerror(errno));
       _exit(1);
     }
+
+    // Parent process waits for child to exit
     int status;
     waitpid(pid, &status, 0);
     if (WIFEXITED(status)) {

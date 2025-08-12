@@ -14,8 +14,10 @@ int main(int argc, char* argv[]){
     if (hostname == "NULL") {
         hostname = "penaur-box";
     }
-    const auto ipc = flag("--ipc", argv, argc);
-    const Runner sandbox(chroot.c_str(), sysallow, limits, hostname, ipc);
+    std::string ipc = flag("--ipc", argv, argc);
+    std::string pid = flag("--pid", argv, argc);
+    std::string vnet = flag("--vnet", argv, argc);
+    const Runner sandbox(chroot.c_str(), sysallow, limits, hostname, ipc, pid,vnet);
     const auto cmd  = flag("--cmd", argv, argc);
     if (cmd == "NULL") {
         error("--cmd is not set, exiting...");
