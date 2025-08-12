@@ -14,6 +14,9 @@ inline std::string flag(const std::string& key, char* argv[], const int argc) {
         if (const auto val = std::string(argv[i]); val == key) reached = true;
         else if (reached) return val;
     }
+    if (reached) {
+        return "true";
+    }
     return "NULL";
 }
 
