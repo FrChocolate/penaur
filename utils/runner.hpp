@@ -2,29 +2,23 @@
 #define RUNNER_H
 
 #include "logger.hpp"
-#include <cerrno>
+#include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <seccomp.h>
 #include <sstream>
 #include <string>
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <unistd.h>
 #include <utility>
 #include <vector>
-#include <string>
-#include <algorithm>
-#include <cctype>
-#include <sys/resource.h>
-#include <string>
-#include <cctype>
-#include <cstdlib>
-#include <iostream>
 
-inline std::vector<std::string> split_by(const std::string &input, char delimiter = ',') {
+inline std::vector<std::string> split_by(const std::string &input,
+                                         char delimiter = ',') {
   std::vector<std::string> result;
   std::stringstream ss(input);
   std::string token;
@@ -35,8 +29,6 @@ inline std::vector<std::string> split_by(const std::string &input, char delimite
 
   return result;
 }
-
-
 
 inline std::string
 rlimit_to_str(const int resource) { // THIS FUNCTION IS AI GENERATED!
@@ -78,51 +70,74 @@ rlimit_to_str(const int resource) { // THIS FUNCTION IS AI GENERATED!
   }
 }
 
-inline int str_to_rlimit(const std::string &name) { // THIS FUNCTION IS AI GENERATED
+inline int
+str_to_rlimit(const std::string &name) { // THIS FUNCTION IS AI GENERATED
   std::string upper = name;
   std::transform(upper.begin(), upper.end(), upper.begin(),
-                 [](unsigned char c){ return std::toupper(c); });
+                 [](unsigned char c) { return std::toupper(c); });
 
-  if (upper == "RLIMIT_CPU")        return RLIMIT_CPU;
-  if (upper == "RLIMIT_FSIZE")      return RLIMIT_FSIZE;
-  if (upper == "RLIMIT_DATA")       return RLIMIT_DATA;
-  if (upper == "RLIMIT_STACK")      return RLIMIT_STACK;
-  if (upper == "RLIMIT_CORE")       return RLIMIT_CORE;
+  if (upper == "RLIMIT_CPU")
+    return RLIMIT_CPU;
+  if (upper == "RLIMIT_FSIZE")
+    return RLIMIT_FSIZE;
+  if (upper == "RLIMIT_DATA")
+    return RLIMIT_DATA;
+  if (upper == "RLIMIT_STACK")
+    return RLIMIT_STACK;
+  if (upper == "RLIMIT_CORE")
+    return RLIMIT_CORE;
 #ifdef RLIMIT_RSS
-  if (upper == "RLIMIT_RSS")        return RLIMIT_RSS;
+  if (upper == "RLIMIT_RSS")
+    return RLIMIT_RSS;
 #endif
-  if (upper == "RLIMIT_NOFILE")     return RLIMIT_NOFILE;
-  if (upper == "RLIMIT_AS")         return RLIMIT_AS;
-  if (upper == "RLIMIT_NPROC")      return RLIMIT_NPROC;
-  if (upper == "RLIMIT_MEMLOCK")    return RLIMIT_MEMLOCK;
-  if (upper == "RLIMIT_LOCKS")      return RLIMIT_LOCKS;
-  if (upper == "RLIMIT_SIGPENDING") return RLIMIT_SIGPENDING;
-  if (upper == "RLIMIT_MSGQUEUE")   return RLIMIT_MSGQUEUE;
-  if (upper == "RLIMIT_NICE")       return RLIMIT_NICE;
-  if (upper == "RLIMIT_RTPRIO")     return RLIMIT_RTPRIO;
-  if (upper == "RLIMIT_RTTIME")     return RLIMIT_RTTIME;
+  if (upper == "RLIMIT_NOFILE")
+    return RLIMIT_NOFILE;
+  if (upper == "RLIMIT_AS")
+    return RLIMIT_AS;
+  if (upper == "RLIMIT_NPROC")
+    return RLIMIT_NPROC;
+  if (upper == "RLIMIT_MEMLOCK")
+    return RLIMIT_MEMLOCK;
+  if (upper == "RLIMIT_LOCKS")
+    return RLIMIT_LOCKS;
+  if (upper == "RLIMIT_SIGPENDING")
+    return RLIMIT_SIGPENDING;
+  if (upper == "RLIMIT_MSGQUEUE")
+    return RLIMIT_MSGQUEUE;
+  if (upper == "RLIMIT_NICE")
+    return RLIMIT_NICE;
+  if (upper == "RLIMIT_RTPRIO")
+    return RLIMIT_RTPRIO;
+  if (upper == "RLIMIT_RTTIME")
+    return RLIMIT_RTTIME;
 
   return -1;
 }
 
-inline rlim_t parse_size(const std::string& str) {
+inline rlim_t parse_size(const std::string &str) {
   size_t i = 0;
-  while (i < str.size() && (std::isdigit(str[i]) || str[i] == '.')) i++;
+  while (i < str.size() && (std::isdigit(str[i]) || str[i] == '.'))
+    i++;
 
-  if (i == 0) return 0;
+  if (i == 0)
+    return 0;
 
   const double number = std::atof(str.substr(0, i).c_str());
   std::string unit = str.substr(i);
   unit.erase(remove_if(unit.begin(), unit.end(), ::isspace), unit.end());
-  for (auto &c : unit) c = std::toupper(c);
+  for (auto &c : unit)
+    c = std::toupper(c);
 
-  if (unit.empty() || unit == "B") return (rlim_t)number;
-  if (unit == "KB") return static_cast<rlim_t>(number * 1024);
-  if (unit == "MB") return static_cast<rlim_t>(number * 1024 * 1024);
-  if (unit == "GB") return static_cast<rlim_t>(number * 1024 * 1024 * 1024);
+  if (unit.empty() || unit == "B")
+    return (rlim_t)number;
+  if (unit == "KB")
+    return static_cast<rlim_t>(number * 1024);
+  if (unit == "MB")
+    return static_cast<rlim_t>(number * 1024 * 1024);
+  if (unit == "GB")
+    return static_cast<rlim_t>(number * 1024 * 1024 * 1024);
   return 0;
 }
-
 
 class Runner {
 public:
@@ -134,17 +149,13 @@ public:
   const std::string unsharePID;
   const std::string vnet;
 
-  explicit Runner(const char *jr, const std::string &alsys, std::string &lts, std::string &hn, std::string& uipc, std::string& upid, std::string& vt)
-      : jailRoot(jr),
-        limits(lts),
-        allowSyscalls(split_by(alsys)),
-        hostname(hn),
-        unshareIPC(uipc),
-        unsharePID(upid),
-        vnet(vt)
+  explicit Runner(const char *jr, const std::string &alsys, std::string &lts,
+                  std::string &hn, std::string &uipc, std::string &upid,
+                  std::string &vt)
+      : jailRoot(jr), limits(lts), allowSyscalls(split_by(alsys)), hostname(hn),
+        unshareIPC(uipc), unsharePID(upid), vnet(vt)
 
   {}
-
 
   void set_network(pid_t pid) const {
     if (vnet != "NULL") {
@@ -155,7 +166,6 @@ public:
       }
       info("Cloned network");
     }
-
   }
 
   void set_UTS_IPC() const {
@@ -167,7 +177,7 @@ public:
       perror("sethostname");
       error("Couldn't set hostname");
     }
-    info("Hostname set to "+ hostname);
+    info("Hostname set to " + hostname);
 
     if (unshareIPC != "NULL") {
       info("Cloning IPC.");
@@ -186,7 +196,6 @@ public:
       }
       info("PID Cloned.");
     }
-
   }
 
   static void set_limit(const int resource, const rlim_t soft,
@@ -231,7 +240,7 @@ public:
 
   void limit_resources() const {
     const std::vector<std::string> comps = split_by(limits, ',');
-    for (const auto& i:comps) {
+    for (const auto &i : comps) {
       std::vector<std::string> comp = split_by(i, ':');
       const auto rlimit = str_to_rlimit(comp.at(0));
       if (rlimit == -1) {
@@ -251,7 +260,6 @@ public:
         cur = max;
       }
       set_limit(rlimit, cur, max);
-
     }
   }
 
@@ -280,7 +288,7 @@ public:
         }
       }
 
-      if (limits != "NULL"){
+      if (limits != "NULL") {
         limit_resources();
       }
 
